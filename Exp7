@@ -1,0 +1,118 @@
+Experiment 7
+Use semaphores to solve the readers-writers problem with writers being given priority
+over readers.
+
+Aim
+
+To implement a solution to the Readers–Writers problem using semaphores, giving priority to writers over readers, so that writers are not starved.
+
+⸻
+
+Algorithm (Writer Priority)
+	1.	Initialize semaphores:
+	•	resource → controls access to shared data
+	•	rmutex → protects read count
+	•	wmutex → protects write count
+	•	readTry → blocks readers when a writer wants to write
+	2.	Initialize counters:
+	•	readcount = 0
+	•	writecount = 0
+	3.	Writer Process
+	•	Increment writecount
+	•	If it is the first writer, block readers
+	•	Lock the shared resource
+	•	Perform writing
+	•	Release the resource
+	•	Decrement writecount
+	•	If last writer, allow readers
+	4.	Reader Process
+	•	Wait if a writer is waiting
+	•	Increment readcount
+	•	If first reader, lock the resource
+	•	Perform reading
+	•	Decrement readcount
+	•	If last reader, release the resource
+
+Program 
+
+Output
+
+Writer 1 is writing
+Writer 2 is writing
+Reader 1 is reading
+Reader 2 is reading
+Reader 3 is reading
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+
+sem_t resource, rmutex, wmutex, readTry;
+int readcount = 0, writecount = 0;
+
+void* reader(void* arg) {
+    int id = *((int*)arg);
+
+    sem_wait(&readTry);
+    sem_wait(&rmutex);
+    readcount++;
+    if (readcount == 1)
+        sem_wait(&resource);
+    sem_post(&rmutex);
+    sem_post(&readTry);
+
+    printf("Reader %d is reading\n", id);
+
+    sem_wait(&rmutex);
+    readcount--;
+    if (readcount == 0)
+        sem_post(&resource);
+    sem_post(&rmutex);
+
+    return NULL;
+}
+
+void* writer(void* arg) {
+    int id = *((int*)arg);
+
+    sem_wait(&wmutex);
+    writecount++;
+    if (writecount == 1)
+        sem_wait(&readTry);
+    sem_post(&wmutex);
+
+    sem_wait(&resource);
+    printf("Writer %d is writing\n", id);
+    sem_post(&resource);
+
+    sem_wait(&wmutex);
+    writecount--;
+    if (writecount == 0)
+        sem_post(&readTry);
+    sem_post(&wmutex);
+
+    return NULL;
+}
+
+int main() {
+    pthread_t r[3], w[2];
+    int rid[3] = {1, 2, 3};
+    int wid[2] = {1, 2};
+
+    sem_init(&resource, 0, 1);
+    sem_init(&rmutex, 0, 1);
+    sem_init(&wmutex, 0, 1);
+    sem_init(&readTry, 0, 1);
+
+    pthread_create(&w[0], NULL, writer, &wid[0]);
+    pthread_create(&r[0], NULL, reader, &rid[0]);
+    pthread_create(&r[1], NULL, reader, &rid[1]);
+    pthread_create(&w[1], NULL, writer, &wid[1]);
+    pthread_create(&r[2], NULL, reader, &rid[2]);
+
+    for (int i = 0; i < 3; i++)
+        pthread_join(r[i], NULL);
+    for (int i = 0; i < 2; i++)
+        pthread_join(w[i], NULL);
+
+    return 0;
+}
