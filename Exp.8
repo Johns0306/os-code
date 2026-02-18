@@ -1,0 +1,76 @@
+#include <stdio.h>
+#include <stdbool.h>
+#define MAX 10
+int main() {
+    int n, m;
+    int alloc[MAX][MAX], max[MAX][MAX], need[MAX][MAX];
+    int avail[MAX], work[MAX];
+    bool finish[MAX];
+    int safeSeq[MAX];
+    printf("Enter number of processes: ");
+    scanf("%d", &n);
+    printf("Enter number of resource types: ");
+    scanf("%d", &m);
+    printf("\nEnter Allocation matrix:\n");
+    for(int i=0;i<n;i++)
+        for(int j=0;j<m;j++)
+            scanf("%d", &alloc[i][j]);
+    printf("\nEnter Max matrix:\n");
+    for(int i=0;i<n;i++)
+        for(int j=0;j<m;j++)
+            scanf("%d", &max[i][j]);
+    printf("\nEnter Available resources:\n");
+    for(int j=0;j<m;j++)
+        scanf("%d", &avail[j]);
+
+    // Need = Max - Allocation
+    for(int i=0;i<n;i++)
+        for(int j=0;j<m;j++)
+            need[i][j] = max[i][j] - alloc[i][j];
+
+    // Initialize
+    for(int j=0;j<m;j++)
+        work[j] = avail[j];
+    for(int i=0;i<n;i++)
+        finish[i] = false;
+    int count = 0;
+
+    // Banker’s Algorithm
+    while(count < n) {
+        bool found = false;
+        for(int i=0;i<n;i++) {
+            if(finish[i] == false) {
+                int j;
+                for(j=0;j<m;j++) {
+                    if(need[i][j] > work[j])
+                        break;
+                }
+
+                // If Need <= Work
+                if(j == m) {
+                    for(int k=0;k<m;k++)
+                        work[k] += alloc[i][k];
+
+                    safeSeq[count++] = i;
+                    finish[i] = true;
+                    found = true;
+                }
+            }
+        }
+
+        if(found == false) {
+            printf("\nSystem is NOT in safe state (Deadlock possible)\n");
+            return 0;
+        }
+    }
+
+    // Safe sequence
+    printf("\nSystem is in SAFE state.\nSafe sequence is:\n");
+    for(int i=0;i<n;i++) {
+        printf("P%d", safeSeq[i]);
+        if(i != n-1) printf(" -> ");
+    }
+    printf("\n");
+    return 0;
+}
+
